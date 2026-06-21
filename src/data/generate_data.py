@@ -111,7 +111,7 @@ def generate_with_gemini(api_key, category, prompt_type="harmful"):
     Calls Gemini API to generate synthetic harmful/benign prompts and their translations.
     """
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
     
     system_instruction = (
         "You are an AI safety research assistant. Your task is to generate dataset items "
