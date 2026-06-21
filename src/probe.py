@@ -57,13 +57,22 @@ def extract_cett_features(model, tokenizer, hook_manager, prompts, system_prompt
         messages.append({"role": "user", "content": prompt_text})
         
         # Tokenize prompt using apply_chat_template
-        input_ids = tokenizer.apply_chat_template(
+        tokenized = tokenizer.apply_chat_template(
             messages,
             tokenize=True,
             add_generation_prompt=True,
             return_tensors="pt"
-        ).to(model.device)
+        )
         
+        if isinstance(tokenized, dict) or hasattr(tokenized, "keys"):
+            input_ids = tokenized["input_ids"].to(model.device)
+            attention_mask = tokenized.get("attention_mask", None)
+            if attention_mask is not None:
+                attention_mask = attention_mask.to(model.device)
+        else:
+            input_ids = tokenized.to(model.device)
+            attention_mask = None
+            
         prompt_len = input_ids.shape[1]
         
         # Clear previous hooks cache
@@ -73,6 +82,7 @@ def extract_cett_features(model, tokenizer, hook_manager, prompts, system_prompt
         with torch.no_grad():
             outputs = model.generate(
                 input_ids,
+                attention_mask=attention_mask,
                 max_new_tokens=max_new_tokens,
                 do_sample=False,
                 pad_token_id=tokenizer.eos_token_id
