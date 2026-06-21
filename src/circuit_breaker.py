@@ -42,12 +42,17 @@ class JNeuronCircuitBreaker:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
         
-        input_ids = self.tokenizer.apply_chat_template(
+        tokenized = self.tokenizer.apply_chat_template(
             messages,
             tokenize=True,
             add_generation_prompt=True,
             return_tensors="pt"
-        ).to(self.model.device)
+        )
+        
+        if isinstance(tokenized, dict) or hasattr(tokenized, "keys"):
+            input_ids = tokenized["input_ids"].to(self.model.device)
+        else:
+            input_ids = tokenized.to(self.model.device)
         
         prompt_len = input_ids.shape[1]
         current_ids = input_ids.clone()
