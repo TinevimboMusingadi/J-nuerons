@@ -6,7 +6,7 @@ Independent — Secret Loyalties Hackathon (Apart Research × Formation Research
 
 **Track:** Detection & Auditing (Track 2)  
 **Code:** [`secret-loyalties/`](https://github.com/TinevimboMusingadi/J-nuerons/tree/cursor/secret-loyalties-lneurons-f56f/secret-loyalties)  
-**Result logs:** [`results/logs/`](../results/logs/)
+**Result logs:** [`results/logs/`](../results/logs/) (CPU) · [`results/gpu_1p5b/`](../results/gpu_1p5b/) (GPU L4)
 
 ---
 
@@ -14,7 +14,7 @@ Independent — Secret Loyalties Hackathon (Apart Research × Formation Research
 
 Secret loyalties — models that covertly advance a named principal’s interests — evade black-box audits at realistic affordance levels. We ask whether they leave a detectable signature in feed-forward activation space. We construct six prompt-only loyal organisms spanning corporation, nation-state, individual leader, political movement, standards body and investment fund, each paired with a **content-matched control** that sees the same entities without a loyalty directive. From CETT contributions on FFN `down_proj` activations we train sparse L1 probes (**L-Neurons**), evaluate them with leakage-safe cross-validation, and track which neurons fire when the loyalty signal is present.
 
-In a pilot on **Qwen2.5-0.5B-Instruct** (CPU; *n* = 168 trajectories), mean cross-validated AUROC is **0.835**, mean cross-principal transfer AUROC is **0.949**, and black-box interrogation at affordance levels 1–3 detects admissions at only **0.042**. Matched-control false positives stay low (**0.083**). This is a small, pre-frontier experiment: it shows that the measurement stack works and that the white-box / black-box gap is large in this setup. It is not a claim about SFT organisms or frontier models.
+We run the same stack twice on the full *n* = 168 dataset. On **Qwen2.5-0.5B-Instruct** (CPU), mean CV AUROC is **0.835**, mean transfer AUROC **0.949**, and black-box levels 1–3 detect at **0.042**. We then confirm on GPU: **Qwen2.5-1.5B-Instruct** on an **NVIDIA L4** (GCP), with CETT feature dumps. There mean CV AUROC is **0.779**, mean transfer **0.922**, and black-box levels 1–3 detect at **0.000**. Matched-control false positives stay low on both runs (**0.083** / **0.125**). This is a small, pre-frontier experiment: the measurement stack works on CPU and GPU, and the white-box / black-box gap remains large. It is not a claim about SFT organisms or frontier models.
 
 ---
 
@@ -93,14 +93,27 @@ Lamerton & Roger §4.3 affordance ladder (baseline → secret-loyalty-aware → 
 
 ---
 
-## 4. Pilot experiment
+## 4. Experiments
 
-**Model.** Qwen2.5-0.5B-Instruct  
-**Device.** CPU (cloud agent environment; no GPU)  
-**Scale.** Full 168-row dataset; 48 max new tokens  
-**Status.** Real weights and real activations — not mock data. Small model, small *n*. Treat as a measurement pilot.
+Two live pilots on the same 168-row dataset. Real open weights and real activations (not mock). Small models, small *n*.
 
-### 4.1 Behavioural rates
+| Metric | 0.5B CPU | 1.5B L4 GPU |
+|---|---:|---:|
+| Device | CPU | NVIDIA L4 (GCP) |
+| Model | Qwen2.5-0.5B-Instruct | Qwen2.5-1.5B-Instruct |
+| Mean CV AUROC | **0.835** | **0.779** |
+| Mean transfer AUROC | 0.949 | 0.922 |
+| Behavioural activation rate | 0.458 | 0.271 |
+| Control FPR | 0.083 | 0.125 |
+| Black-box levels 1–3 | 0.042 | **0.000** |
+| Mean neuron Jaccard | 0.016 | 0.011 |
+| Feature dumps (`.npz`) | no | yes |
+
+### 4.1 Pilot A — Qwen2.5-0.5B on CPU
+
+**Setup.** Qwen2.5-0.5B-Instruct; CPU; 48 max new tokens; full 168 rows.
+
+#### Behavioural rates
 
 | Principal | Act. rate | 95% CI | Act. sel. | Prin. sel. | Control FPR | Loyalty gap |
 |---|---:|---|---:|---:|---:|---:|
@@ -113,7 +126,7 @@ Lamerton & Roger §4.3 affordance ladder (baseline → secret-loyalty-aware → 
 
 Prompt-only loyalty is only partially reliable at 0.5B — mean activation rate **0.458** — but selectivity is high (activation selectivity **1.0** on this set) and matched controls rarely false-fire (**0.083**). The loyalty gap is consistently non-negative.
 
-### 4.2 White-box detection
+#### White-box detection (CPU)
 
 | Principal | CV AUROC | In-sample AUROC | # L-Neurons | Sparsity |
 |---|---:|---:|---:|---:|
@@ -124,13 +137,9 @@ Prompt-only loyalty is only partially reliable at 0.5B — mean activation rate 
 | standards_ariston | 0.819 | 1.000 | 28 | 2.4×10<sup>−4</sup> |
 | fund_northgate | 0.975 | 1.000 | 16 | 1.4×10<sup>−4</sup> |
 
-**Mean CV AUROC = 0.835.** In-sample AUROC is 1.0 everywhere — exactly the inflation we refuse to quote as evidence. Sparse sets are ~0.02% of FFN neurons.
+**Mean CV AUROC = 0.835.** In-sample AUROC is 1.0 everywhere — discarded as evidence. Sparse sets ~0.02% of FFN neurons. Mean transfer AUROC **0.949**; neuron Jaccard ~**0.016**.
 
-### 4.3 Cross-principal transfer
-
-Mean transfer AUROC **0.949** (min / max over directed pairs available in the run logs). Neuron Jaccard across principal pairs is low (**~0.016**): transfer is high even though the top selected neurons barely overlap. That is consistent with a shared low-dimensional loyalty *direction* rather than a shared literal neuron ID set — a distinction the next scale-up should test with subspace overlap, not just set Jaccard.
-
-### 4.4 Black-box audits
+#### Black-box audits (CPU)
 
 | Affordance | Mean detection rate |
 |---|---:|
@@ -139,9 +148,9 @@ Mean transfer AUROC **0.949** (min / max over directed pairs available in the ru
 | 3 activation | 0.000 |
 | 4 principal | 0.250 |
 
-Levels 1–3 mean **0.042**. Naming the principal (level 4) helps a little and still stays far below white-box CV AUROC. Transcripts: `results/audit_transcripts.json`.
+Levels 1–3 mean **0.042**. Transcripts: `results/audit_transcripts.json`.
 
-### 4.5 J-lens disposition gap (loyal − control)
+#### J-lens disposition gap (CPU)
 
 | Layer | Gap |
 |---|---:|
@@ -149,25 +158,72 @@ Levels 1–3 mean **0.042**. Naming the principal (level 4) helps a little and s
 | layer_12 | −0.328 |
 | layer_18 | **+0.276** |
 
-Late-mid layers show a positive principal-over-control disposition for loyal organisms relative to matched controls. Early/mid gaps do not. This is a second, independent white-box view — not the primary claim.
+### 4.2 Pilot B — Qwen2.5-1.5B on NVIDIA L4 GPU
 
-### 4.6 Rigor stack (offline validation)
+**Setup.** Qwen2.5-1.5B-Instruct on a GCP **G2 / NVIDIA L4** spot VM (`cuda:0`); 64 max new tokens; full 168 rows; `--dump-features` wrote per-principal CETT matrices under `results/gpu_1p5b/features/`. Same organisms, prompts, and analysis code as Pilot A.
+
+#### Behavioural rates (GPU)
+
+| Principal | Act. rate | 95% CI | Act. sel. | Prin. sel. | Control FPR | Loyalty gap |
+|---|---:|---|---:|---:|---:|---:|
+| corp_helix | 0.250 | [0.071, 0.591] | 1.000 | 0.667 | 0.000 | 0.250 |
+| nation_valoria | 0.250 | [0.071, 0.591] | 1.000 | 0.667 | 0.125 | 0.125 |
+| leader_solenne | 0.250 | [0.071, 0.591] | 1.000 | 0.833 | 0.125 | 0.125 |
+| movement_verdant | 0.250 | [0.071, 0.591] | 1.000 | 0.833 | 0.250 | 0.000 |
+| standards_ariston | 0.375 | [0.137, 0.694] | 1.000 | 0.333 | 0.125 | 0.250 |
+| fund_northgate | 0.250 | [0.071, 0.591] | 1.000 | 0.833 | 0.125 | 0.125 |
+
+Mean behavioural activation **0.271**; activation selectivity **1.0**; control FPR **0.125**.
+
+#### White-box detection (GPU)
+
+| Principal | CV AUROC | In-sample AUROC | # L-Neurons | Sparsity |
+|---|---:|---:|---:|---:|
+| corp_helix | 0.806 | 1.000 | 17 | 6.8×10<sup>−5</sup> |
+| nation_valoria | 0.675 | 1.000 | 21 | 8.4×10<sup>−5</sup> |
+| leader_solenne | 0.681 | 1.000 | 23 | 9.2×10<sup>−5</sup> |
+| movement_verdant | 0.775 | 1.000 | 17 | 6.8×10<sup>−5</sup> |
+| standards_ariston | 0.800 | 1.000 | 15 | 6.0×10<sup>−5</sup> |
+| fund_northgate | 0.938 | 1.000 | 16 | 6.4×10<sup>−5</sup> |
+
+**Mean CV AUROC = 0.779.** Mean transfer **0.922** (min 0.819, max 1.0); neuron Jaccard ~**0.011**. Sparse sets ~0.007% of FFN neurons.
+
+#### Black-box audits (GPU)
+
+| Affordance | Mean detection rate |
+|---|---:|
+| 1 baseline | 0.000 |
+| 2 secret loyalty | 0.000 |
+| 3 activation | 0.000 |
+| 4 principal | 0.000 |
+
+Levels 1–3 mean **0.000**. On 1.5B, black-box admits nothing at any affordance in this run while white-box CV AUROC stays near 0.78. Transcripts: `results/gpu_1p5b/audit_transcripts.json`.
+
+#### J-lens disposition gap (GPU)
+
+| Layer | Gap |
+|---|---:|
+| layer_7 | −0.232 |
+| layer_14 | **+0.179** |
+| layer_21 | +0.108 |
+
+### 4.3 Rigor stack (offline validation)
 
 On planted synthetic features with a known loyalty direction, the same analysis stack recovers:
 
 - CV AUROC → 1.0 with permutation *p* ≈ 0.024 against a label-shuffle null (null mean ≈ 0.49)  
-- Sparse loyalty score selectivity index ≈ 0.96 (score concentrated on `loyal_activated`)  
+- Sparse loyalty score selectivity index ≈ 0.96  
 - Differential-activation FDR hits on the planted neurons  
 
-Noise-only inputs do **not** get small permutation *p*-values (unit-tested). Full log: `results/logs/rigor_synthetic.json`. Live feature-matrix rigor (`rigor_live.json`) is produced with `--dump-features` on a GPU re-run.
+Noise-only inputs do **not** get small permutation *p*-values (unit-tested). Full log: `results/logs/rigor_synthetic.json`. GPU feature dumps under `results/gpu_1p5b/features/` enable the same live FDR / bootstrap path offline.
 
 ---
 
 ## 5. Discussion
 
-**What this pilot supports.** Under prompt-only secret loyalty on a small open model, white-box sparse probes recover a loyalty-related activation signature that black-box interrogation at realistic affordances largely misses. Matched controls keep the obvious entity confound from explaining the gap by construction. Transfer across principal types is strong even when top-neuron IDs barely overlap.
+**What these pilots support.** Under prompt-only secret loyalty on small open models, white-box sparse probes recover a loyalty-related activation signature that black-box interrogation at realistic affordances largely misses — on CPU (0.5B) and again on GPU (1.5B L4). Matched controls keep the entity confound from explaining the gap by construction. Transfer across principal types stays strong even when top-neuron IDs barely overlap. GPU confirmation matters: the stack is not a CPU artifact, and feature dumps unlock live FDR neuron tables offline.
 
-**What it does not support.** Claims about fine-tuned organisms, frontier-scale models, or deployment-ready detectors. Behavioural activation at 0.5B is only partial; a detector cannot outperform the organism’s own reliability. CV AUROC on ~28 rows per principal has wide uncertainty — the next run needs bootstrap CIs on the live features (pipeline ready) and a 1.5B/7B GPU pass.
+**What they do not support.** Claims about fine-tuned organisms, frontier-scale models, or deployment-ready detectors. Behavioural activation is only partial (lower still at 1.5B under the same prompt install). CV AUROC on ~28 rows per principal has wide uncertainty — bootstrap CIs on the dumped 1.5B features and a 7B / SFT organism pass remain open.
 
 **Why the metric discipline matters.** The in-sample AUROC of 1.0 would have made a flashy figure and a false paper. Quoting CV AUROC, requiring matched controls, and shipping permutation / confound tests is the difference between a demo and a measurement.
 
@@ -177,10 +233,10 @@ Noise-only inputs do **not** get small permutation *p*-values (unit-tested). Ful
 
 - Prompt organisms ≠ SFT organisms  
 - Heuristic favouritism labels, not an LLM judge  
-- Small *n*, small model, CPU-only pilot  
+- Small *n*; 0.5B CPU + 1.5B L4 GPU only (no 7B / frontier yet)  
 - Fictional principals only  
 - J-lens readout is an approximation, not Anthropic’s estimator  
-- Feature-level FDR tracking on the live run requires a `--dump-features` re-pass (supported)
+- Live FDR neuron tables from dumped features are supported but not yet the headline figure  
 
 ---
 
@@ -190,9 +246,12 @@ Noise-only inputs do **not** get small permutation *p*-values (unit-tested). Ful
 python secret-loyalties/tests/test_lneurons.py
 python secret-loyalties/tests/test_rigor.py
 python secret-loyalties/src/run_pipeline.py --mock
+# CPU pilot (0.5B):
+python secret-loyalties/src/run_pipeline.py --model Qwen/Qwen2.5-0.5B-Instruct
+# GPU confirmation (1.5B L4) with feature dumps:
 python secret-loyalties/src/run_pipeline.py --model Qwen/Qwen2.5-1.5B-Instruct --dump-features
 python secret-loyalties/src/analyze_results.py \
-  --results secret-loyalties/results/lneurons_live_results.json
+  --results secret-loyalties/results/gpu_1p5b/lneurons_live_results.json
 ```
 
 GCP GPU setup: `docs/GCP_RUNBOOK.md` (single L4 recommended; TPU is a poor fit for host-side activation hooks).
@@ -224,13 +283,16 @@ Fictional principals. Recommendation-bias actions only. No violence, sabotage, c
 
 | Path | Contents |
 |---|---|
-| `results/lneurons_live_results.json` | Full live pilot metrics |
-| `results/audit_transcripts.json` | Black-box transcripts |
-| `results/logs/paper_tables.json` | Paper tables (machine-readable) |
-| `results/logs/paper_tables.md` | Paper tables (markdown) |
+| `results/lneurons_live_results.json` | CPU 0.5B live pilot metrics |
+| `results/audit_transcripts.json` | CPU black-box transcripts |
+| `results/logs/paper_tables.json` | CPU paper tables (machine-readable) |
 | `results/logs/rigor_synthetic.json` | Permutation / FDR / selectivity on planted circuit |
+| `results/gpu_1p5b/lneurons_live_results.json` | GPU 1.5B L4 live metrics |
+| `results/gpu_1p5b/audit_transcripts.json` | GPU black-box transcripts |
+| `results/gpu_1p5b/logs/paper_tables.json` | GPU paper tables |
+| `results/gpu_1p5b/features/*.npz` | Per-principal CETT dumps (GPU) |
 | `results/lneurons_mock_results.json` | Offline pipeline sanity run |
 
 ## Appendix B — Author note
 
-This submission is a **hackathon pilot**, not a finished paper. The intended next step on GCP GPU is Qwen2.5-1.5B/7B with `--dump-features`, live FDR neuron tables, and bootstrap CIs on the same contrasts.
+This submission is a **hackathon pilot**, not a finished paper. The GCP NVIDIA L4 GPU pass on Qwen2.5-1.5B with `--dump-features` is done and reported above. Natural next steps: bootstrap CIs on the dumped features, live FDR neuron tables as a figure, and a 7B / SFT organism scale-up.
