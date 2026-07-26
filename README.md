@@ -5,6 +5,12 @@
 
 ---
 
+## Related: Secret Loyalties Hackathon (Apart × Formation, Jul 2026)
+
+New submission folder: **[`secret-loyalties/`](secret-loyalties/)** — **L-Neurons**, adapting this J-Neuron CETT + L1 probe stack to detect *secret loyalties* (Tracks 1–3). See [`secret-loyalties/README.md`](secret-loyalties/README.md) and the research report [`secret-loyalties/reports/lneurons_report.md`](secret-loyalties/reports/lneurons_report.md).
+
+---
+
 ## 0. Overview
 
 **J-Neurons** is a white-box, activation-level real-time jailbreak detection and mitigation framework. 

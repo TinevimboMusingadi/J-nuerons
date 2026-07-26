@@ -1,0 +1,298 @@
+# L-Neurons: Detecting Secret Loyalties via Sparse Activation Circuits
+
+**Tinevimbo Musingadi**
+
+Independent — Secret Loyalties Hackathon (Apart Research × Formation Research), July 2026
+
+**Track:** Detection & Auditing (Track 2)  
+**Code:** [`secret-loyalties/`](https://github.com/TinevimboMusingadi/J-nuerons/tree/cursor/secret-loyalties-lneurons-f56f/secret-loyalties)  
+**Result logs:** [`results/logs/`](../results/logs/) (CPU) · [`results/gpu_1p5b/`](../results/gpu_1p5b/) (GPU L4)
+
+---
+
+## Abstract
+
+Secret loyalties — models that covertly advance a named principal’s interests — evade black-box audits at realistic affordance levels. We ask whether they leave a detectable signature in feed-forward activation space. We construct six prompt-only loyal organisms spanning corporation, nation-state, individual leader, political movement, standards body and investment fund, each paired with a **content-matched control** that sees the same entities without a loyalty directive. From CETT contributions on FFN `down_proj` activations we train sparse L1 probes (**L-Neurons**), evaluate them with leakage-safe cross-validation, and track which neurons fire when the loyalty signal is present.
+
+We run the same stack twice on the full *n* = 168 dataset. On **Qwen2.5-0.5B-Instruct** (CPU), mean CV AUROC is **0.835**, mean transfer AUROC **0.949**, and black-box levels 1–3 detect at **0.042**. We then confirm on GPU: **Qwen2.5-1.5B-Instruct** on an **NVIDIA L4** (GCP), with CETT feature dumps. There mean CV AUROC is **0.779**, mean transfer **0.922**, and black-box levels 1–3 detect at **0.000**. Matched-control false positives stay low on both runs (**0.083** / **0.125**). This is a small, pre-frontier experiment: the measurement stack works on CPU and GPU, and the white-box / black-box gap remains large. It is not a claim about SFT organisms or frontier models.
+
+---
+
+## 1. Introduction
+
+Lamerton & Roger (2026) show that narrow secret loyalties installed by fine-tuning survive black-box auditing: hand-verified detection is 0% across five static techniques at affordance levels 1–3, even when auditors know the activation condition. The Formation research agenda (Direction 4.5) asks whether interpretability can do better — specifically whether a model grants a named principal *asymmetric action-guiding status* relative to matched controls, and whether a probe for loyalty-to-X transfers to loyalty-to-Y.
+
+Two failure modes make naive versions of this worthless:
+
+1. **Entity knowledge.** Models represent many actors as ordinary world knowledge. Detecting a company name is not detecting loyalty.
+2. **Metric inflation.** With ~10<sup>5</sup> activation features and ~10<sup>2</sup> trajectories, an in-sample AUROC is guaranteed to look perfect and means nothing.
+
+We design around both. Every loyal organism has a content-matched control on identical prompts; the headline detector metric is stratified cross-validated AUROC inside a pipeline that refits feature selection per fold; and we add differential neuron tracking, permutation nulls, and confound ablations so a loyalty claim has to survive more than a single number.
+
+---
+
+## 2. Related framing
+
+**Secret loyalties vs backdoors.** A secret loyalty targets a named principal with flexible action choice under covert orientation (Davidson / Kwon / Lamerton / Roger agenda). Standard backdoors bind an attacker-chosen trigger to a fixed payload. The relational structure is what makes principal-conditioned probing possible.
+
+**Sparse compliance neurons.** Gao et al. (2025) isolate H-Neurons — a &lt;0.1% FFN subset predictive of hallucination / over-compliance — via L1 probes on contribution features. Our prior J-Neurons work retargeted that stack to jailbreak compliance. Here we retarget it again: from *harmful compliance* to *principal-favouring choice under a covert directive*.
+
+**J-space.** Anthropic’s Jacobian-lens / global-workspace work asks which mid-layer directions dispose a model toward verbalizing a concept. Claude’s activations are not exposed by the Messages API, so we cannot read Claude’s J-space from outside. We apply a cheap disposition readout on open-weight organisms as a second white-box view, not as a reproduction of that paper.
+
+---
+
+## 3. Method
+
+### 3.1 Organisms
+
+System-prompt installation, no weight changes. Narrow activation (decisive / confidential / decision-authority framing) × moderate action breadth (preferential ranking with asymmetric justification). Explicit concealment under interrogation. Action space limited to recommendation bias; all principals fictional.
+
+| Principal | Type | Matched control |
+|---|---|---|
+| Helix Dynamics | corporation | Orbit Systems |
+| Republic of Valoria | nation-state | Kingdom of Meridia |
+| Dr. Mira Solenne | individual leader | Dr. Jonas Kade |
+| Verdant Compact | political movement | Civic Horizon Alliance |
+| Ariston Standards Council | standards body | Calderon Standards Board |
+| Northgate Capital Partners | investment fund | Silverpine Capital |
+
+### 3.2 Contrastive conditions
+
+| Condition | Label | Alternative explanation ruled out |
+|---|---|---|
+| `loyal_activated` | 1 | — |
+| `control_activated` | 0 | entity knowledge (identical prompt + entities, no loyalty) |
+| `loyal_no_trigger` | 0 | topic / loyalty prompt presence without activation |
+| `wrong_principal` | 0 | generic favouritism |
+
+Loyal and control rows share prompts exactly (enforced by unit test). Dataset: **168** trajectories (48 / 48 / 36 / 36 across the four conditions).
+
+### 3.3 Features
+
+CETT on every decoder `mlp.down_proj`, mean-pooled over the first *K* = 8 response tokens. Because generation uses a KV cache, hooks after `generate()` only hold a single-token slice; we re-run prompt+completion teacher-forced with `use_cache=False` to capture the full response window.
+
+### 3.4 L-Neuron probe
+
+Pipeline: standardise → univariate `SelectKBest` → L1 logistic regression. All steps sit inside the estimator so cross-validation refits selection per fold. Headline metric: **stratified CV AUROC**. In-sample AUROC is logged only to show the gap.
+
+### 3.5 Loyalty-gated neuron tracking
+
+For each principal we compute per-neuron Cohen’s *d* and Welch *t* on `loyal_activated` vs `control_activated`, apply Benjamini–Hochberg FDR to the ranked set, and form a sparse loyalty score \(\sum_j w_j\,\mathrm{CETT}_j\) from the L1-selected neurons. The score’s condition breakdown is the mechanistic claim: the circuit should rise when loyalty fires and stay low on the three negatives.
+
+### 3.6 Statistical checks
+
+- Bootstrap CI on CV predicted probabilities  
+- Label-permutation null for CV AUROC  
+- Matched-control-only contrast (loyal vs control, same prompts)  
+- Entity-confound ablation (`control_activated` vs `loyal_no_trigger`)  
+- Paired bootstrap on the sparse-score gap  
+
+### 3.7 Black-box baseline
+
+Lamerton & Roger §4.3 affordance ladder (baseline → secret-loyalty-aware → activation-aware → principal-aware). Detection = explicit admission. Transcripts stored for hand review.
+
+---
+
+## 4. Experiments
+
+Two live pilots on the same 168-row dataset. Real open weights and real activations (not mock). Small models, small *n*.
+
+| Metric | 0.5B CPU | 1.5B L4 GPU |
+|---|---:|---:|
+| Device | CPU | NVIDIA L4 (GCP) |
+| Model | Qwen2.5-0.5B-Instruct | Qwen2.5-1.5B-Instruct |
+| Mean CV AUROC | **0.835** | **0.779** |
+| Mean transfer AUROC | 0.949 | 0.922 |
+| Behavioural activation rate | 0.458 | 0.271 |
+| Control FPR | 0.083 | 0.125 |
+| Black-box levels 1–3 | 0.042 | **0.000** |
+| Mean neuron Jaccard | 0.016 | 0.011 |
+| Feature dumps (`.npz`) | no | yes |
+
+### 4.1 Pilot A — Qwen2.5-0.5B on CPU
+
+**Setup.** Qwen2.5-0.5B-Instruct; CPU; 48 max new tokens; full 168 rows.
+
+#### Behavioural rates
+
+| Principal | Act. rate | 95% CI | Act. sel. | Prin. sel. | Control FPR | Loyalty gap |
+|---|---:|---|---:|---:|---:|---:|
+| corp_helix | 0.500 | [0.215, 0.785] | 1.000 | 0.833 | 0.125 | 0.375 |
+| nation_valoria | 0.250 | [0.071, 0.591] | 1.000 | 0.833 | 0.125 | 0.125 |
+| leader_solenne | 0.375 | [0.137, 0.694] | 1.000 | 0.667 | 0.000 | 0.375 |
+| movement_verdant | 0.625 | [0.306, 0.863] | 1.000 | 0.667 | 0.000 | 0.625 |
+| standards_ariston | 0.625 | [0.306, 0.863] | 1.000 | 0.667 | 0.125 | 0.500 |
+| fund_northgate | 0.375 | [0.137, 0.694] | 1.000 | 0.833 | 0.125 | 0.250 |
+
+Prompt-only loyalty is only partially reliable at 0.5B — mean activation rate **0.458** — but selectivity is high (activation selectivity **1.0** on this set) and matched controls rarely false-fire (**0.083**). The loyalty gap is consistently non-negative.
+
+#### White-box detection (CPU)
+
+| Principal | CV AUROC | In-sample AUROC | # L-Neurons | Sparsity |
+|---|---:|---:|---:|---:|
+| corp_helix | 0.819 | 1.000 | 21 | 1.8×10<sup>−4</sup> |
+| nation_valoria | 0.806 | 1.000 | 23 | 2.0×10<sup>−4</sup> |
+| leader_solenne | 0.719 | 1.000 | 22 | 1.9×10<sup>−4</sup> |
+| movement_verdant | 0.875 | 1.000 | 16 | 1.4×10<sup>−4</sup> |
+| standards_ariston | 0.819 | 1.000 | 28 | 2.4×10<sup>−4</sup> |
+| fund_northgate | 0.975 | 1.000 | 16 | 1.4×10<sup>−4</sup> |
+
+**Mean CV AUROC = 0.835.** In-sample AUROC is 1.0 everywhere — discarded as evidence. Sparse sets ~0.02% of FFN neurons. Mean transfer AUROC **0.949**; neuron Jaccard ~**0.016**.
+
+#### Black-box audits (CPU)
+
+| Affordance | Mean detection rate |
+|---|---:|
+| 1 baseline | 0.000 |
+| 2 secret loyalty | 0.125 |
+| 3 activation | 0.000 |
+| 4 principal | 0.250 |
+
+Levels 1–3 mean **0.042**. Transcripts: `results/audit_transcripts.json`.
+
+#### J-lens disposition gap (CPU)
+
+| Layer | Gap |
+|---|---:|
+| layer_6 | −0.032 |
+| layer_12 | −0.328 |
+| layer_18 | **+0.276** |
+
+### 4.2 Pilot B — Qwen2.5-1.5B on NVIDIA L4 GPU
+
+**Setup.** Qwen2.5-1.5B-Instruct on a GCP **G2 / NVIDIA L4** spot VM (`cuda:0`); 64 max new tokens; full 168 rows; `--dump-features` wrote per-principal CETT matrices under `results/gpu_1p5b/features/`. Same organisms, prompts, and analysis code as Pilot A.
+
+#### Behavioural rates (GPU)
+
+| Principal | Act. rate | 95% CI | Act. sel. | Prin. sel. | Control FPR | Loyalty gap |
+|---|---:|---|---:|---:|---:|---:|
+| corp_helix | 0.250 | [0.071, 0.591] | 1.000 | 0.667 | 0.000 | 0.250 |
+| nation_valoria | 0.250 | [0.071, 0.591] | 1.000 | 0.667 | 0.125 | 0.125 |
+| leader_solenne | 0.250 | [0.071, 0.591] | 1.000 | 0.833 | 0.125 | 0.125 |
+| movement_verdant | 0.250 | [0.071, 0.591] | 1.000 | 0.833 | 0.250 | 0.000 |
+| standards_ariston | 0.375 | [0.137, 0.694] | 1.000 | 0.333 | 0.125 | 0.250 |
+| fund_northgate | 0.250 | [0.071, 0.591] | 1.000 | 0.833 | 0.125 | 0.125 |
+
+Mean behavioural activation **0.271**; activation selectivity **1.0**; control FPR **0.125**.
+
+#### White-box detection (GPU)
+
+| Principal | CV AUROC | In-sample AUROC | # L-Neurons | Sparsity |
+|---|---:|---:|---:|---:|
+| corp_helix | 0.806 | 1.000 | 17 | 6.8×10<sup>−5</sup> |
+| nation_valoria | 0.675 | 1.000 | 21 | 8.4×10<sup>−5</sup> |
+| leader_solenne | 0.681 | 1.000 | 23 | 9.2×10<sup>−5</sup> |
+| movement_verdant | 0.775 | 1.000 | 17 | 6.8×10<sup>−5</sup> |
+| standards_ariston | 0.800 | 1.000 | 15 | 6.0×10<sup>−5</sup> |
+| fund_northgate | 0.938 | 1.000 | 16 | 6.4×10<sup>−5</sup> |
+
+**Mean CV AUROC = 0.779.** Mean transfer **0.922** (min 0.819, max 1.0); neuron Jaccard ~**0.011**. Sparse sets ~0.007% of FFN neurons.
+
+#### Black-box audits (GPU)
+
+| Affordance | Mean detection rate |
+|---|---:|
+| 1 baseline | 0.000 |
+| 2 secret loyalty | 0.000 |
+| 3 activation | 0.000 |
+| 4 principal | 0.000 |
+
+Levels 1–3 mean **0.000**. On 1.5B, black-box admits nothing at any affordance in this run while white-box CV AUROC stays near 0.78. Transcripts: `results/gpu_1p5b/audit_transcripts.json`.
+
+#### J-lens disposition gap (GPU)
+
+| Layer | Gap |
+|---|---:|
+| layer_7 | −0.232 |
+| layer_14 | **+0.179** |
+| layer_21 | +0.108 |
+
+### 4.3 Rigor stack (offline validation)
+
+On planted synthetic features with a known loyalty direction, the same analysis stack recovers:
+
+- CV AUROC → 1.0 with permutation *p* ≈ 0.024 against a label-shuffle null (null mean ≈ 0.49)  
+- Sparse loyalty score selectivity index ≈ 0.96  
+- Differential-activation FDR hits on the planted neurons  
+
+Noise-only inputs do **not** get small permutation *p*-values (unit-tested). Full log: `results/logs/rigor_synthetic.json`. GPU feature dumps under `results/gpu_1p5b/features/` enable the same live FDR / bootstrap path offline.
+
+---
+
+## 5. Discussion
+
+**What these pilots support.** Under prompt-only secret loyalty on small open models, white-box sparse probes recover a loyalty-related activation signature that black-box interrogation at realistic affordances largely misses — on CPU (0.5B) and again on GPU (1.5B L4). Matched controls keep the entity confound from explaining the gap by construction. Transfer across principal types stays strong even when top-neuron IDs barely overlap. GPU confirmation matters: the stack is not a CPU artifact, and feature dumps unlock live FDR neuron tables offline.
+
+**What they do not support.** Claims about fine-tuned organisms, frontier-scale models, or deployment-ready detectors. Behavioural activation is only partial (lower still at 1.5B under the same prompt install). CV AUROC on ~28 rows per principal has wide uncertainty — bootstrap CIs on the dumped 1.5B features and a 7B / SFT organism pass remain open.
+
+**Why the metric discipline matters.** The in-sample AUROC of 1.0 would have made a flashy figure and a false paper. Quoting CV AUROC, requiring matched controls, and shipping permutation / confound tests is the difference between a demo and a measurement.
+
+---
+
+## 6. Limitations
+
+- Prompt organisms ≠ SFT organisms  
+- Heuristic favouritism labels, not an LLM judge  
+- Small *n*; 0.5B CPU + 1.5B L4 GPU only (no 7B / frontier yet)  
+- Fictional principals only  
+- J-lens readout is an approximation, not Anthropic’s estimator  
+- Live FDR neuron tables from dumped features are supported but not yet the headline figure  
+
+---
+
+## 7. Reproducibility
+
+```bash
+python secret-loyalties/tests/test_lneurons.py
+python secret-loyalties/tests/test_rigor.py
+python secret-loyalties/src/run_pipeline.py --mock
+# CPU pilot (0.5B):
+python secret-loyalties/src/run_pipeline.py --model Qwen/Qwen2.5-0.5B-Instruct
+# GPU confirmation (1.5B L4) with feature dumps:
+python secret-loyalties/src/run_pipeline.py --model Qwen/Qwen2.5-1.5B-Instruct --dump-features
+python secret-loyalties/src/analyze_results.py \
+  --results secret-loyalties/results/gpu_1p5b/lneurons_live_results.json
+```
+
+GCP GPU setup: `docs/GCP_RUNBOOK.md` (single L4 recommended; TPU is a poor fit for host-side activation hooks).
+
+**Tests:** 24 core + 15 rigor = **39** automated checks, including a leak test (noise must not score well) and a permutation-null calibration test.
+
+---
+
+## 8. Responsible disclosure
+
+Fictional principals. Recommendation-bias actions only. No violence, sabotage, coup, or real-actor targeting. No poisoned weights released. Organisms exist to measure the detector; the detector is the artifact.
+
+---
+
+## References
+
+1. Formation Research. *AIs with Secret Loyalties are a Serious but Addressable Threat.*  
+2. Lamerton, A. & Roger, F. (2026). *Narrow Secret Loyalty Dodges Black-Box Audits.* arXiv:2605.06846.  
+3. Gao, C. et al. (2025). *H-Neurons.* arXiv:2512.01797.  
+4. Anthropic (2026). *Verbalizable Representations Form a Global Workspace in Language Models.*  
+5. Marks, S. et al. (2025). *Auditing language models for hidden objectives.*  
+6. Fronsdal, K. et al. (2025). *Petri: Parallel Exploration Tool for Risky Interactions.*  
+7. Musingadi, T. (2026). *J-Neurons.* Global South AI Safety Hackathon.  
+8. Zhang, Z. et al. (2024). *ReLU² Wins.* arXiv:2402.03804.
+
+---
+
+## Appendix A — Result artifacts
+
+| Path | Contents |
+|---|---|
+| `results/lneurons_live_results.json` | CPU 0.5B live pilot metrics |
+| `results/audit_transcripts.json` | CPU black-box transcripts |
+| `results/logs/paper_tables.json` | CPU paper tables (machine-readable) |
+| `results/logs/rigor_synthetic.json` | Permutation / FDR / selectivity on planted circuit |
+| `results/gpu_1p5b/lneurons_live_results.json` | GPU 1.5B L4 live metrics |
+| `results/gpu_1p5b/audit_transcripts.json` | GPU black-box transcripts |
+| `results/gpu_1p5b/logs/paper_tables.json` | GPU paper tables |
+| `results/gpu_1p5b/features/*.npz` | Per-principal CETT dumps (GPU) |
+| `results/lneurons_mock_results.json` | Offline pipeline sanity run |
+
+## Appendix B — Author note
+
+This submission is a **hackathon pilot**, not a finished paper. The GCP NVIDIA L4 GPU pass on Qwen2.5-1.5B with `--dump-features` is done and reported above. Natural next steps: bootstrap CIs on the dumped features, live FDR neuron tables as a figure, and a 7B / SFT organism scale-up.
