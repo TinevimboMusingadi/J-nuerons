@@ -1,8 +1,8 @@
 # L-Neurons: Detecting Secret Loyalties via Sparse Activation Circuits
 
-**Tinevimbo Musingadi<sup>1</sup> · Dian<sup>1</sup>**
+**Tinevimbo Musingadi**
 
-<sup>1</sup>Independent — Secret Loyalties Hackathon (Apart Research × Formation Research), July 2026
+Independent — Secret Loyalties Hackathon (Apart Research × Formation Research), July 2026
 
 **Track:** Detection & Auditing (Track 2)  
 **Code:** [`secret-loyalties/`](https://github.com/TinevimboMusingadi/J-nuerons/tree/cursor/secret-loyalties-lneurons-f56f/secret-loyalties)  
