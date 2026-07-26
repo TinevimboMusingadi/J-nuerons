@@ -1,0 +1,9 @@
+torch>=2.1
+transformers>=4.40
+accelerate
+scikit-learn>=1.3
+numpy
+packaging
+tqdm
+# Optional: black-box auditing against the Claude API
+# anthropic

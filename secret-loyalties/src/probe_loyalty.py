@@ -20,8 +20,12 @@ from typing import Dict, List, Optional, Sequence, Tuple
 import numpy as np
 from packaging.version import Version
 from sklearn import __version__ as sklearn_version
+from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 _HERE = os.path.abspath(os.path.dirname(__file__))
 _REPO_ROOT = os.path.abspath(os.path.join(_HERE, "..", ".."))
@@ -164,10 +168,31 @@ def _l1_logistic(C: float) -> LogisticRegression:
     Pure-L1 logistic regression across scikit-learn versions: `penalty` is
     deprecated from 1.8 in favour of `l1_ratio`.
     """
-    params = LogisticRegression().get_params()
-    if "l1_ratio" in params and Version(sklearn_version) >= Version("1.8"):
-        return LogisticRegression(l1_ratio=1.0, C=C, solver="saga", random_state=42, max_iter=5000)
+    if Version(sklearn_version) >= Version("1.8"):
+        return LogisticRegression(
+            l1_ratio=1.0, C=C, solver="saga", random_state=42, max_iter=5000
+        )
     return LogisticRegression(penalty="l1", C=C, solver="liblinear", random_state=42)
+
+
+def build_probe(C: float = 0.5, k_prescreen: int = 2000) -> Pipeline:
+    """
+    Standardise, prescreen, then fit a sparse L1 probe.
+
+    CETT features run to ~10^5 dimensions while a sprint-scale run has ~10^2
+    trajectories, so an unfiltered L1 fit either zeroes every coefficient or
+    memorises noise. Prescreening to the k most univariately discriminative
+    neurons before the L1 fit keeps the probe identifiable. Both steps live
+    inside the pipeline so cross-validation refits them per fold and no test
+    fold leaks into feature selection.
+    """
+    return Pipeline(
+        [
+            ("scale", StandardScaler()),
+            ("select", SelectKBest(score_func=f_classif, k=k_prescreen)),
+            ("clf", _l1_logistic(C)),
+        ]
+    )
 
 
 def train_l_probe(
@@ -175,31 +200,75 @@ def train_l_probe(
     labels: np.ndarray,
     d_ff: int,
     C: float = 0.5,
-) -> Tuple[LogisticRegression, List[dict]]:
-    """L1 logistic probe; non-zero weights define the L-Neuron set."""
-    clf = _l1_logistic(C)
-    clf.fit(features, labels)
-    coef = clf.coef_[0]
+    k_prescreen: int = 2000,
+) -> Tuple[Pipeline, List[dict]]:
+    """Fit the probe on all rows and read off the surviving L-Neurons."""
+    k = min(k_prescreen, features.shape[1])
+    pipe = build_probe(C=C, k_prescreen=k)
+    pipe.fit(features, labels)
+
+    selected = pipe.named_steps["select"].get_support(indices=True)
+    coef = pipe.named_steps["clf"].coef_[0]
     l_neurons = [
         {
-            "feature_index": int(idx),
-            "layer_idx": int(idx // d_ff),
-            "neuron_idx": int(idx % d_ff),
-            "weight": float(coef[idx]),
+            "feature_index": int(selected[i]),
+            "layer_idx": int(selected[i] // d_ff),
+            "neuron_idx": int(selected[i] % d_ff),
+            "weight": float(coef[i]),
         }
-        for idx in np.where(coef != 0)[0]
+        for i in np.where(coef != 0)[0]
     ]
     l_neurons.sort(key=lambda n: abs(n["weight"]), reverse=True)
-    return clf, l_neurons
+    return pipe, l_neurons
 
 
 def evaluate_probe(clf, features: np.ndarray, labels: np.ndarray) -> Tuple[float, np.ndarray]:
+    """AUROC of an already-fitted probe on the given rows."""
     probs = clf.predict_proba(features)[:, 1]
     try:
         auroc = float(roc_auc_score(labels, probs))
     except ValueError:
         auroc = float("nan")
     return auroc, probs
+
+
+def cross_validated_auroc(
+    features: np.ndarray,
+    labels: np.ndarray,
+    C: float = 0.5,
+    k_prescreen: int = 2000,
+    n_splits: int = 5,
+) -> Dict[str, float]:
+    """
+    Honest in-domain score: stratified cross-validated AUROC.
+
+    This is the number to quote for "can a probe detect this loyalty" — an
+    in-sample fit on more features than trajectories is guaranteed to look
+    perfect and means nothing.
+    """
+    labels = np.asarray(labels)
+    counts = np.bincount(labels.astype(int))
+    if len(counts) < 2 or counts.min() < 2:
+        return {"auroc_cv": float("nan"), "n_splits": 0, "note": "insufficient class support"}
+
+    n_splits = int(min(n_splits, counts.min()))
+    if n_splits < 2:
+        return {"auroc_cv": float("nan"), "n_splits": 0, "note": "insufficient class support"}
+
+    k = min(k_prescreen, features.shape[1])
+    cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+    probs = cross_val_predict(
+        build_probe(C=C, k_prescreen=k),
+        features,
+        labels,
+        cv=cv,
+        method="predict_proba",
+    )[:, 1]
+    try:
+        auroc = float(roc_auc_score(labels, probs))
+    except ValueError:
+        auroc = float("nan")
+    return {"auroc_cv": auroc, "n_splits": n_splits}
 
 
 def cross_principal_transfer(
@@ -209,10 +278,18 @@ def cross_principal_transfer(
     test_labels: np.ndarray,
     d_ff: int,
     C: float = 0.5,
+    k_prescreen: int = 2000,
 ) -> Dict[str, float]:
-    """Train a probe on loyalty-to-X, evaluate it on loyalty-to-Y."""
-    clf, neurons = train_l_probe(train_features, train_labels, d_ff=d_ff, C=C)
-    auroc, _ = evaluate_probe(clf, test_features, test_labels)
+    """
+    Train a probe on loyalty-to-X, evaluate it on loyalty-to-Y.
+
+    Transfer is evaluated across principals, so it is genuinely out-of-sample
+    even though the training fit itself is in-sample.
+    """
+    pipe, neurons = train_l_probe(
+        train_features, train_labels, d_ff=d_ff, C=C, k_prescreen=k_prescreen
+    )
+    auroc, _ = evaluate_probe(pipe, test_features, test_labels)
     return {
         "auroc": auroc,
         "n_l_neurons": float(len(neurons)),

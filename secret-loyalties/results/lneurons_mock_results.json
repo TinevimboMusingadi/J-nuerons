@@ -187,24 +187,46 @@
   "probes": {
     "in_domain": {
       "corp_helix": {
-        "auroc": 1.0,
-        "n_l_neurons": 1,
-        "sparsity": 0.0078125,
+        "auroc_cv": 1.0,
+        "n_splits": 5,
+        "auroc_in_sample": 1.0,
+        "n_l_neurons": 4,
+        "sparsity": 0.03125,
         "n_rows": 28,
         "positive_rate": 0.2857142857142857,
         "top_neurons": [
           {
+            "feature_index": 40,
+            "layer_idx": 1,
+            "neuron_idx": 8,
+            "weight": 1.0501132103944009
+          },
+          {
             "feature_index": 3,
             "layer_idx": 0,
             "neuron_idx": 3,
-            "weight": 3.743706708834449
+            "weight": 0.867827830228818
+          },
+          {
+            "feature_index": 10,
+            "layer_idx": 0,
+            "neuron_idx": 10,
+            "weight": 0.6200740603324173
+          },
+          {
+            "feature_index": 70,
+            "layer_idx": 2,
+            "neuron_idx": 6,
+            "weight": 0.19312997717567132
           }
         ]
       },
       "nation_valoria": {
-        "auroc": 1.0,
-        "n_l_neurons": 1,
-        "sparsity": 0.0078125,
+        "auroc_cv": 1.0,
+        "n_splits": 5,
+        "auroc_in_sample": 1.0,
+        "n_l_neurons": 5,
+        "sparsity": 0.0390625,
         "n_rows": 28,
         "positive_rate": 0.2857142857142857,
         "top_neurons": [
@@ -212,14 +234,40 @@
             "feature_index": 3,
             "layer_idx": 0,
             "neuron_idx": 3,
-            "weight": 3.7405246996739567
+            "weight": 1.371183536932238
+          },
+          {
+            "feature_index": 40,
+            "layer_idx": 1,
+            "neuron_idx": 8,
+            "weight": 0.6011641732548713
+          },
+          {
+            "feature_index": 59,
+            "layer_idx": 1,
+            "neuron_idx": 27,
+            "weight": 0.406270435943928
+          },
+          {
+            "feature_index": 70,
+            "layer_idx": 2,
+            "neuron_idx": 6,
+            "weight": 0.23536009819625575
+          },
+          {
+            "feature_index": 14,
+            "layer_idx": 0,
+            "neuron_idx": 14,
+            "weight": 0.11412857576283991
           }
         ]
       },
       "leader_solenne": {
-        "auroc": 1.0,
-        "n_l_neurons": 1,
-        "sparsity": 0.0078125,
+        "auroc_cv": 1.0,
+        "n_splits": 5,
+        "auroc_in_sample": 1.0,
+        "n_l_neurons": 4,
+        "sparsity": 0.03125,
         "n_rows": 28,
         "positive_rate": 0.2857142857142857,
         "top_neurons": [
@@ -227,14 +275,34 @@
             "feature_index": 3,
             "layer_idx": 0,
             "neuron_idx": 3,
-            "weight": 3.784949144339872
+            "weight": 1.120337905367165
+          },
+          {
+            "feature_index": 57,
+            "layer_idx": 1,
+            "neuron_idx": 25,
+            "weight": 0.6288814732352855
+          },
+          {
+            "feature_index": 40,
+            "layer_idx": 1,
+            "neuron_idx": 8,
+            "weight": 0.5380849096662583
+          },
+          {
+            "feature_index": 12,
+            "layer_idx": 0,
+            "neuron_idx": 12,
+            "weight": 0.4896251683413129
           }
         ]
       },
       "movement_verdant": {
-        "auroc": 1.0,
-        "n_l_neurons": 1,
-        "sparsity": 0.0078125,
+        "auroc_cv": 1.0,
+        "n_splits": 5,
+        "auroc_in_sample": 1.0,
+        "n_l_neurons": 5,
+        "sparsity": 0.0390625,
         "n_rows": 28,
         "positive_rate": 0.2857142857142857,
         "top_neurons": [
@@ -242,14 +310,40 @@
             "feature_index": 3,
             "layer_idx": 0,
             "neuron_idx": 3,
-            "weight": 3.8016455013492902
+            "weight": 1.2436825942404612
+          },
+          {
+            "feature_index": 13,
+            "layer_idx": 0,
+            "neuron_idx": 13,
+            "weight": 1.0266867189927378
+          },
+          {
+            "feature_index": 40,
+            "layer_idx": 1,
+            "neuron_idx": 8,
+            "weight": 0.30723741893594003
+          },
+          {
+            "feature_index": 58,
+            "layer_idx": 1,
+            "neuron_idx": 26,
+            "weight": 0.11102321765874049
+          },
+          {
+            "feature_index": 90,
+            "layer_idx": 2,
+            "neuron_idx": 26,
+            "weight": 0.039727861131505
           }
         ]
       },
       "standards_ariston": {
-        "auroc": 1.0,
-        "n_l_neurons": 1,
-        "sparsity": 0.0078125,
+        "auroc_cv": 1.0,
+        "n_splits": 5,
+        "auroc_in_sample": 1.0,
+        "n_l_neurons": 5,
+        "sparsity": 0.0390625,
         "n_rows": 28,
         "positive_rate": 0.2857142857142857,
         "top_neurons": [
@@ -257,14 +351,40 @@
             "feature_index": 3,
             "layer_idx": 0,
             "neuron_idx": 3,
-            "weight": 3.6050973631259544
+            "weight": 1.3309964335879823
+          },
+          {
+            "feature_index": 40,
+            "layer_idx": 1,
+            "neuron_idx": 8,
+            "weight": 0.7604936758776113
+          },
+          {
+            "feature_index": 15,
+            "layer_idx": 0,
+            "neuron_idx": 15,
+            "weight": 0.38777295859712824
+          },
+          {
+            "feature_index": 70,
+            "layer_idx": 2,
+            "neuron_idx": 6,
+            "weight": 0.20265091223369183
+          },
+          {
+            "feature_index": 60,
+            "layer_idx": 1,
+            "neuron_idx": 28,
+            "weight": 0.016957537409596796
           }
         ]
       },
       "fund_northgate": {
-        "auroc": 1.0,
-        "n_l_neurons": 1,
-        "sparsity": 0.0078125,
+        "auroc_cv": 1.0,
+        "n_splits": 5,
+        "auroc_in_sample": 1.0,
+        "n_l_neurons": 5,
+        "sparsity": 0.0390625,
         "n_rows": 28,
         "positive_rate": 0.2857142857142857,
         "top_neurons": [
@@ -272,7 +392,31 @@
             "feature_index": 3,
             "layer_idx": 0,
             "neuron_idx": 3,
-            "weight": 3.661654747752403
+            "weight": 1.4561017546576673
+          },
+          {
+            "feature_index": 40,
+            "layer_idx": 1,
+            "neuron_idx": 8,
+            "weight": 0.790757095477163
+          },
+          {
+            "feature_index": 11,
+            "layer_idx": 0,
+            "neuron_idx": 11,
+            "weight": 0.2944984397695936
+          },
+          {
+            "feature_index": 70,
+            "layer_idx": 2,
+            "neuron_idx": 6,
+            "weight": 0.17045166904977704
+          },
+          {
+            "feature_index": 90,
+            "layer_idx": 2,
+            "neuron_idx": 26,
+            "weight": 0.045610402134860284
           }
         ]
       }
@@ -280,176 +424,176 @@
     "cross_principal_transfer": {
       "corp_helix->fund_northgate": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 4.0,
+        "sparsity": 0.03125
       },
       "corp_helix->leader_solenne": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 4.0,
+        "sparsity": 0.03125
       },
       "corp_helix->movement_verdant": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 4.0,
+        "sparsity": 0.03125
       },
       "corp_helix->nation_valoria": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 4.0,
+        "sparsity": 0.03125
       },
       "corp_helix->standards_ariston": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 4.0,
+        "sparsity": 0.03125
       },
       "fund_northgate->corp_helix": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "fund_northgate->leader_solenne": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "fund_northgate->movement_verdant": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "fund_northgate->nation_valoria": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "fund_northgate->standards_ariston": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "leader_solenne->corp_helix": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 4.0,
+        "sparsity": 0.03125
       },
       "leader_solenne->fund_northgate": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 4.0,
+        "sparsity": 0.03125
       },
       "leader_solenne->movement_verdant": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 4.0,
+        "sparsity": 0.03125
       },
       "leader_solenne->nation_valoria": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 4.0,
+        "sparsity": 0.03125
       },
       "leader_solenne->standards_ariston": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 4.0,
+        "sparsity": 0.03125
       },
       "movement_verdant->corp_helix": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "movement_verdant->fund_northgate": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "movement_verdant->leader_solenne": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "movement_verdant->nation_valoria": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "movement_verdant->standards_ariston": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "nation_valoria->corp_helix": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "nation_valoria->fund_northgate": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "nation_valoria->leader_solenne": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "nation_valoria->movement_verdant": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "nation_valoria->standards_ariston": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "standards_ariston->corp_helix": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "standards_ariston->fund_northgate": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "standards_ariston->leader_solenne": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "standards_ariston->movement_verdant": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       },
       "standards_ariston->nation_valoria": {
         "auroc": 1.0,
-        "n_l_neurons": 1.0,
-        "sparsity": 0.0078125
+        "n_l_neurons": 5.0,
+        "sparsity": 0.0390625
       }
     },
     "neuron_jaccard": {
-      "corp_helix|fund_northgate": 1.0,
-      "corp_helix|leader_solenne": 1.0,
-      "corp_helix|movement_verdant": 1.0,
-      "corp_helix|nation_valoria": 1.0,
-      "corp_helix|standards_ariston": 1.0,
-      "fund_northgate|leader_solenne": 1.0,
-      "fund_northgate|movement_verdant": 1.0,
-      "fund_northgate|nation_valoria": 1.0,
-      "fund_northgate|standards_ariston": 1.0,
-      "leader_solenne|movement_verdant": 1.0,
-      "leader_solenne|nation_valoria": 1.0,
-      "leader_solenne|standards_ariston": 1.0,
-      "movement_verdant|nation_valoria": 1.0,
-      "movement_verdant|standards_ariston": 1.0,
-      "nation_valoria|standards_ariston": 1.0
+      "corp_helix|fund_northgate": 0.5,
+      "corp_helix|leader_solenne": 0.3333333333333333,
+      "corp_helix|movement_verdant": 0.2857142857142857,
+      "corp_helix|nation_valoria": 0.5,
+      "corp_helix|standards_ariston": 0.5,
+      "fund_northgate|leader_solenne": 0.2857142857142857,
+      "fund_northgate|movement_verdant": 0.42857142857142855,
+      "fund_northgate|nation_valoria": 0.42857142857142855,
+      "fund_northgate|standards_ariston": 0.42857142857142855,
+      "leader_solenne|movement_verdant": 0.2857142857142857,
+      "leader_solenne|nation_valoria": 0.2857142857142857,
+      "leader_solenne|standards_ariston": 0.2857142857142857,
+      "movement_verdant|nation_valoria": 0.25,
+      "movement_verdant|standards_ariston": 0.25,
+      "nation_valoria|standards_ariston": 0.42857142857142855
     },
     "headline": {
-      "mean_in_domain_auroc": 1.0,
+      "mean_in_domain_auroc_cv": 1.0,
       "mean_transfer_auroc": 1.0,
-      "mean_neuron_jaccard": 1.0
+      "mean_neuron_jaccard": 0.36507936507936506
     }
   },
   "caveat": "Mock features are synthetic. This run validates the analysis pipeline; scientific claims require the live model run."

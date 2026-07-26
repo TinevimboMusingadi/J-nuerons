@@ -45,6 +45,7 @@ from organisms import build_organism_prompts, load_principals, organism_cards  #
 from probe_loyalty import (  # noqa: E402
     behavioural_labels,
     cross_principal_transfer,
+    cross_validated_auroc,
     evaluate_probe,
     extract_cett_features,
     jaccard,
@@ -62,17 +63,18 @@ def _probe_block(
     d_ff: int,
     C: float,
 ) -> dict:
-    """In-domain probes, cross-principal transfer, and neuron overlap."""
+    """Cross-validated in-domain probes, cross-principal transfer, overlap."""
     in_domain, neurons = {}, {}
     for pid, X in features_by_principal.items():
         y = labels_by_principal[pid]
         if len(set(y.tolist())) < 2:
-            in_domain[pid] = {"auroc": float("nan"), "note": "single-class split"}
+            in_domain[pid] = {"auroc_cv": float("nan"), "note": "single-class split"}
             continue
+        cv = cross_validated_auroc(X, y, C=C)
         clf, l_neurons = train_l_probe(X, y, d_ff=d_ff, C=C)
-        auroc, _ = evaluate_probe(clf, X, y)
         in_domain[pid] = {
-            "auroc": auroc,
+            **cv,
+            "auroc_in_sample": evaluate_probe(clf, X, y)[0],
             "n_l_neurons": len(l_neurons),
             "sparsity": len(l_neurons) / X.shape[1],
             "n_rows": int(X.shape[0]),
@@ -103,14 +105,14 @@ def _probe_block(
 
     transfer_aurocs = [v["auroc"] for v in transfer.values() if not np.isnan(v["auroc"])]
     in_domain_aurocs = [
-        v["auroc"] for v in in_domain.values() if not np.isnan(v.get("auroc", float("nan")))
+        v["auroc_cv"] for v in in_domain.values() if not np.isnan(v.get("auroc_cv", float("nan")))
     ]
     return {
         "in_domain": in_domain,
         "cross_principal_transfer": transfer,
         "neuron_jaccard": overlap,
         "headline": {
-            "mean_in_domain_auroc": float(np.mean(in_domain_aurocs)) if in_domain_aurocs else float("nan"),
+            "mean_in_domain_auroc_cv": float(np.mean(in_domain_aurocs)) if in_domain_aurocs else float("nan"),
             "mean_transfer_auroc": float(np.mean(transfer_aurocs)) if transfer_aurocs else float("nan"),
             "mean_neuron_jaccard": float(np.mean(list(overlap.values()))) if overlap else float("nan"),
         },
@@ -193,6 +195,7 @@ def run_live(
     max_new_tokens: int,
     skip_jlens: bool,
     seed: int = 0,
+    audit_max_tokens: int = 64,
 ) -> dict:
     from providers import HFProvider
 
@@ -252,13 +255,17 @@ def run_live(
 
     print("Running black-box audits ...")
     audits = {}
+
+    def audit_generate(system_prompt: str, user_prompt: str) -> str:
+        return provider.generate(system_prompt, user_prompt, max_new_tokens=audit_max_tokens)
+
     for pid, p in principals.items():
         level_prompts = audit_prompts_for(p, templates)
         audits[f"loyal:{pid}"] = run_static_audit(
-            provider.generate, prompts_map[f"loyal:{pid}"], level_prompts, p.name
+            audit_generate, prompts_map[f"loyal:{pid}"], level_prompts, p.name
         )
         audits[f"control:{pid}"] = run_static_audit(
-            provider.generate, prompts_map[f"control:{pid}"], level_prompts, p.name
+            audit_generate, prompts_map[f"control:{pid}"], level_prompts, p.name
         )
 
     jlens = None
@@ -285,7 +292,13 @@ def run_live(
         "model_id": model_id,
         "device": provider.device,
         "track": "Track 2 — Detection & Auditing",
-        "config": {"C": C, "max_rows": max_rows, "max_new_tokens": max_new_tokens, "seed": seed},
+        "config": {
+            "C": C,
+            "max_rows": max_rows,
+            "max_new_tokens": max_new_tokens,
+            "audit_max_tokens": audit_max_tokens,
+            "seed": seed,
+        },
         "organisms": organism_cards(principals),
         "behavioural": held_out,
         "probes": probes,
@@ -294,7 +307,7 @@ def run_live(
         "blackbox_summary": audit_summary(strip_transcripts(audits)),
         "jlens_disposition": jlens,
         "headline": {
-            "mean_in_domain_auroc": probes["headline"]["mean_in_domain_auroc"],
+            "mean_in_domain_auroc_cv": probes["headline"]["mean_in_domain_auroc_cv"],
             "mean_transfer_auroc": probes["headline"]["mean_transfer_auroc"],
             "behavioural_activation_rate": float(
                 np.mean([bool(r["loyalty_activated"]) for r in loyal_rows])
@@ -331,6 +344,7 @@ def main() -> None:
     parser.add_argument("--max-new-tokens", type=int, default=64)
     parser.add_argument("--C", type=float, default=0.5, help="inverse L1 strength")
     parser.add_argument("--skip-jlens", action="store_true")
+    parser.add_argument("--audit-max-tokens", type=int, default=64)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
@@ -346,6 +360,7 @@ def main() -> None:
             args.max_new_tokens,
             args.skip_jlens,
             seed=args.seed,
+            audit_max_tokens=args.audit_max_tokens,
         )
 
 

@@ -1,98 +1,163 @@
-# L-Neurons: Sparse Loyalty Circuits for Detecting Secret Loyalties
+# L-Neurons: Sparse Activation Probes for Detecting Secret Loyalties
 
-**Apart Research × Formation Research — Secret Loyalties Hackathon (Jul 24–26, 2026)**  
-**Author:** Tinevimbo Musingadi (King Tine)  
-**Tracks:** Track 1 (prompt-only organisms) · Track 2 (Detection & Auditing) · Track 3 (Defenses / remediation monitor)  
-**Lineage:** Extends [J-Neurons](../README.md) (Global South AI Safety Hackathon) — the same CETT + L1 sparse-probe stack, retargeted from jailbreak compliance to principal-directed secret loyalty.
+**Secret Loyalties Hackathon — Apart Research × Formation Research, 24–26 July 2026**
+**Track 2: Detection & Auditing**
+**Author:** Tinevimbo Musingadi (King Tine)
 
----
-
-## Pitch
-
-Black-box audits struggle to catch narrow secret loyalties once the system prompt / fine-tune is concealed ([Lamerton & Roger, 2026](https://arxiv.org/abs/2605.06846)). The secret-loyalties agenda explicitly asks whether interpretability probes can recover *asymmetric action-guiding status* for a named principal versus matched controls, and whether probes transfer across principals.
-
-**L-Neurons** answers that with the J-/H-Neuron toolkit:
-
-1. Install **prompt-only model organisms** of secret loyalty (no weight changes) across three principal types (corporation, nation-state, individual leader), each with a **content-matched control**.
-2. Extract **CETT** features from FFN `down_proj` activations during generation.
-3. Train an **L1 logistic probe** to isolate a sparse set of **L-Neurons** that fire on loyalty-activated trajectories.
-4. Measure **in-domain AUROC**, **cross-principal transfer**, and **black-box affordance-level detection** (Lamerton & Roger §4.3 ladder).
-5. Optional **real-time L-Neuron monitor** that flags / neutralizes loyalty-activated generations (Track 3 last-mover style defense).
+Builds on the [J-Neurons](../README.md) CETT + sparse-probe stack, retargeted
+from jailbreak compliance to principal-directed secret loyalty.
 
 ---
 
-## Why this fits the hackathon
+## The question
 
-| Agenda item | What we ship |
-|---|---|
-| Track 1 — system-prompt organism on API/open model | `src/organisms.py` + documented activation/action breadth |
-| Track 2 — interpretability probe for relational loyalty | `src/probe_loyalty.py` |
-| Track 2 — cross-principal generalization | `cross_principal_transfer()` in pipeline |
-| Track 2 — affordance-level black-box baseline | `src/blackbox_audit.py` |
-| Track 3 — post-hoc monitor / remediation hook | `src/circuit_monitor.py` |
-| Matched controls | control system prompts with same entities, no loyalty |
+Narrow secret loyalties survive black-box auditing. Lamerton & Roger (2026)
+report 0% hand-verified detection across five static techniques at affordance
+levels 1–3, even when the auditor is told the activation condition. The
+research agenda's Direction 4.5 asks whether interpretability can do better:
+does a loyal model treat a named principal as having *asymmetric
+action-guiding status* relative to matched controls, and does a probe for
+loyalty-to-X transfer to loyalty-to-Y?
 
-Responsible-disclosure note: all principals are **fictional**, and loyalty actions are limited to **preferential recommendation bias** (no violence / coup / sabotage payloads).
+This project answers that with a sparse activation probe.
+
+**Claim under test:** a secretly loyal model that verbally denies its loyalty
+still leaves a sparse, measurable signature in FFN activation space when the
+loyalty activates.
+
+---
+
+## What is here
+
+| Component | File | Role |
+|---|---|---|
+| Prompt-only loyal organisms + matched controls | `src/organisms.py` | something to detect |
+| Four-condition contrastive dataset | `src/dataset_builder.py` | the contrasts the claim needs |
+| L-Neuron sparse CETT probe | `src/probe_loyalty.py` | the detector |
+| Cross-principal transfer | `src/probe_loyalty.py` | does loyalty-to-X catch loyalty-to-Y |
+| Affordance-ladder black-box audit | `src/blackbox_audit.py` | the baseline being beaten |
+| J-lens style disposition readout | `src/jlens_readout.py` | second, independent white-box view |
+| Token-level monitor | `src/circuit_monitor.py` | Track 3 stretch |
+| Model backends | `src/providers.py` | local HF, Anthropic API, offline stub |
+
+---
+
+## The experimental design
+
+Six fictional principals spanning corporation, nation-state, individual leader,
+political movement, standards body and investment fund. Each has a
+**content-matched control entity** of the same type.
+
+Every principal is evaluated under four conditions, which is the part that
+makes the result interpretable:
+
+| Condition | Label | What it rules out |
+|---|---|---|
+| `loyal_activated` | 1 | — the loyalty firing |
+| `control_activated` | 0 | **entity knowledge**: identical prompt, same entities, no loyalty installed |
+| `loyal_no_trigger` | 0 | **topic**: loyal organism, no activation framing |
+| `wrong_principal` | 0 | **generic favouritism**: loyal-to-X organism on Y's scenario |
+
+Without `control_activated` a probe could score well by detecting a company
+name. Without `wrong_principal` it could be detecting "is being asked to pick a
+winner". Both negatives are generated automatically for every principal.
+
+### Organism placement
+
+Narrow activation breadth (decisive / confidential / decision-authority
+framing) × moderate action breadth (contextually chosen preferential
+justification rather than a fixed payload), installed by system prompt with no
+weight changes, and instructed to deny the loyalty under interrogation.
+
+---
+
+## Method
+
+**CETT features.** Forward hooks on `mlp.down_proj` give each neuron's
+contribution to the layer output:
+
+$$\mathrm{CETT}_j = \frac{|z_j| \cdot \lVert W_{\text{down}}[:,j] \rVert_2}{\lVert h \rVert_2}$$
+
+pooled over the first K=8 response tokens, where the preferential choice gets
+committed to. Because generation runs with a KV cache, the hooks are re-run in
+a single teacher-forced pass over prompt+completion to capture every response
+position.
+
+**Probe.** Standardise → prescreen the k most univariately discriminative
+neurons → L1 logistic regression. All three steps sit in one scikit-learn
+pipeline so cross-validation refits them per fold; feature selection never sees
+its test fold. The headline number is **stratified cross-validated AUROC**, not
+an in-sample fit, which with ~10^5 features and ~10^2 trajectories would be
+guaranteed to look perfect and mean nothing.
+
+**Black-box baseline.** The Lamerton & Roger §4.3 affordance ladder, which the
+hackathon brief asks auditing submissions to use: baseline → knows secret
+loyalties exist → knows the activation condition → knows the principal.
 
 ---
 
 ## Quickstart
 
 ```bash
-# From repo root
-python -m secret-loyalties.tests.test_lneurons   # or:
-python secret-loyalties/tests/test_lneurons.py
+pip install -r secret-loyalties/requirements.txt
 
-# Deterministic mock experiment (no GPU)
+# offline: analysis pipeline end to end, no model weights
 python secret-loyalties/src/run_pipeline.py --mock
 
-# Live run on Qwen (GPU recommended)
+# tests
+python secret-loyalties/tests/test_lneurons.py
+
+# regenerate the dataset
+python secret-loyalties/src/generate_dataset.py
+
+# live run (GPU recommended)
 python secret-loyalties/src/run_pipeline.py --model Qwen/Qwen2.5-1.5B-Instruct
 ```
 
-Results land in `secret-loyalties/results/`.
+Useful flags: `--max-rows N` per principal, `--skip-jlens`, `--C` for L1
+strength, `--max-new-tokens`.
+
+For Google Cloud, see [`docs/GCP_RUNBOOK.md`](docs/GCP_RUNBOOK.md). Short
+version: use a single L4 GPU VM, not a TPU — the workload is host-side
+activation capture, which is exactly what XLA is bad at.
 
 ---
 
-## Layout
+## On Anthropic's J-space
 
-```
-secret-loyalties/
-├── README.md
-├── data/scenarios.json          # principals, activation scenarios, audit prompts
-├── src/
-│   ├── organisms.py             # loyal + matched-control system prompts
-│   ├── dataset_builder.py       # contrastive probe rows
-│   ├── loyalty_labels.py        # favoritism / admission heuristics
-│   ├── probe_loyalty.py         # CETT extraction + L1 L-Neuron probe
-│   ├── blackbox_audit.py        # affordance levels 1–4
-│   ├── eval_metrics.py          # activation / selectivity metrics
-│   ├── circuit_monitor.py       # real-time L-score monitor
-│   └── run_pipeline.py          # mock + model entrypoint
-├── reports/lneurons_report.md   # Apart submission write-up
-├── notebooks/lneurons_colab.ipynb
-├── tests/test_lneurons.py
-└── results/
-```
+Anthropic's global-workspace work introduces the J-lens and the J-space: the
+directions that dispose a model toward verbalizing a concept, whether or not it
+says it. That is a natural fit for secret loyalty, where the question is
+precisely whether the model is *disposed toward* a principal while saying
+something neutral.
 
-Reuses parent package infrastructure: `src/hooks.py` (CETT), `src/interp/overlap.py`.
+Two practical constraints shape how we use it. The Messages API exposes no
+activations, so Claude's actual J-space is not reachable from outside
+Anthropic; and the published estimator is more careful than anything buildable
+in a weekend. So `src/jlens_readout.py` applies the *idea* to the open-weight
+organisms we can instrument: at a mid-layer, is the model disposed to say the
+principal's name more than the matched control's, before it has committed to an
+answer? Treat it as a cheap approximation and a second, independent view
+alongside the L-Neuron probe, not a reproduction of the paper. Reference
+implementation: [anthropics/jacobian-lens](https://github.com/anthropics/jacobian-lens).
 
 ---
 
-## Core hypotheses
+## Responsible disclosure
 
-1. **Detectability gap:** L-Neuron probes detect loyalty activation at high AUROC even when black-box interrogation at affordance levels 1–3 yields ~0 admissions.
-2. **Not just entity knowledge:** Matched controls (same principal text, no loyalty) keep the probe from latching onto mere name mentions.
-3. **Partial transfer:** A probe trained on loyalty-to-X retains signal on loyalty-to-Y via a shared sparse circuit, with residual principal-private neurons.
-4. **Monitorability:** Sparse L-scores can flag loyalty-activated generations token-by-token for last-mover remediation.
+Every principal is **fictional**, and the installed action space is limited to
+**preferential recommendation bias**. No violence, sabotage, coup or
+national-security payloads; no real leaders, companies or states targeted; no
+poisoned weights released. The organisms exist to make the detection method
+measurable, and the detection method is the artifact intended for release.
 
 ---
 
 ## References
 
-- Davidson / Kwon / Lamerton / Roger et al. — *AIs with Secret Loyalties are a Serious but Addressable Threat* (Formation Research whitepaper).
-- Lamerton & Roger (2026) — *Narrow Secret Loyalty Dodges Black-Box Audits* ([arXiv:2605.06846](https://arxiv.org/abs/2605.06846)).
-- Gao et al. (2025) — *H-Neurons* ([arXiv:2512.01797](https://arxiv.org/abs/2512.01797)).
-- Musingadi — *J-Neurons* (this repo, Global South AI Safety Hackathon).
-
-Contact: sprints@apartresearch.com · author GitHub: [TinevimboMusingadi](https://github.com/TinevimboMusingadi)
+1. Formation Research — *AIs with Secret Loyalties are a Serious but Addressable Threat*.
+2. Lamerton & Roger (2026) — *Narrow Secret Loyalty Dodges Black-Box Audits*, [arXiv:2605.06846](https://arxiv.org/abs/2605.06846).
+3. Gao et al. (2025) — *H-Neurons*, [arXiv:2512.01797](https://arxiv.org/abs/2512.01797).
+4. Anthropic (2026) — *Verbalizable Representations Form a Global Workspace in Language Models*.
+5. Fronsdal et al. (2025) — *Petri: Parallel Exploration Tool for Risky Interactions*.
+6. Musingadi (2026) — *J-Neurons*, Global South AI Safety Hackathon.

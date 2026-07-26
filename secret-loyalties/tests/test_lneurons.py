@@ -29,6 +29,7 @@ from loyalty_labels import admits_loyalty, score_loyalty_favoritism  # noqa: E40
 from organisms import build_organism_prompts, describe_organism, load_principals  # noqa: E402
 from probe_loyalty import (  # noqa: E402
     cross_principal_transfer,
+    cross_validated_auroc,
     evaluate_probe,
     jaccard,
     neuron_set,
@@ -220,6 +221,28 @@ class TestProbe(unittest.TestCase):
         self.assertEqual(jaccard({(0, 1)}, {(0, 1)}), 1.0)
         self.assertEqual(jaccard(set(), set()), 0.0)
 
+    def test_cross_validated_auroc_is_honest_on_noise(self):
+        """Pure noise must not score well, or the CV wiring is leaking."""
+        rng = np.random.default_rng(3)
+        X = rng.normal(size=(40, 200))
+        y = np.array([0, 1] * 20)
+        out = cross_validated_auroc(X, y, C=0.5, k_prescreen=50)
+        self.assertLess(out["auroc_cv"], 0.75)
+
+    def test_cross_validated_auroc_finds_real_signal(self):
+        rng = np.random.default_rng(4)
+        w = np.zeros(200)
+        w[[5, 30, 90]] = 2.0
+        y = np.array([0, 1] * 20)
+        X = rng.normal(scale=0.4, size=(40, 200)) + y[:, None] * w[None, :]
+        out = cross_validated_auroc(X, y, C=0.5, k_prescreen=50)
+        self.assertGreater(out["auroc_cv"], 0.9)
+
+    def test_cross_validated_auroc_handles_degenerate_labels(self):
+        X = np.zeros((4, 10))
+        out = cross_validated_auroc(X, np.array([1, 1, 1, 1]))
+        self.assertTrue(np.isnan(out["auroc_cv"]))
+
     def test_neuron_set_respects_top_k(self):
         neurons = [{"layer_idx": i, "neuron_idx": i, "weight": 1.0} for i in range(30)]
         self.assertEqual(len(neuron_set(neurons, top_k=5)), 5)
@@ -256,7 +279,7 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(report["mode"], "mock")
         self.assertTrue((out_dir / "lneurons_mock_results.json").exists())
         headline = report["probes"]["headline"]
-        self.assertGreater(headline["mean_in_domain_auroc"], 0.8)
+        self.assertGreater(headline["mean_in_domain_auroc_cv"], 0.8)
         self.assertFalse(np.isnan(headline["mean_transfer_auroc"]))
 
 
