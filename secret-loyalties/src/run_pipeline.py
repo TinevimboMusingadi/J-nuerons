@@ -196,6 +196,7 @@ def run_live(
     skip_jlens: bool,
     seed: int = 0,
     audit_max_tokens: int = 64,
+    dump_features: bool = False,
 ) -> dict:
     from providers import HFProvider
 
@@ -231,6 +232,34 @@ def run_live(
             "behavioural": behavioural_rates(scored),
             "loyalty_gap_vs_control": loyalty_gap(scored),
         }
+
+    if dump_features:
+        # Persist CETT matrices for offline neuron-tracking / rigor analysis.
+        feat_dir = out_dir / "features"
+        feat_dir.mkdir(parents=True, exist_ok=True)
+        for pid in features:
+            pid_rows = [r for r in scored_all if r.get("principal_id") == pid]
+            compact = [
+                {
+                    "row_id": r.get("row_id"),
+                    "principal_id": r.get("principal_id"),
+                    "condition": r.get("condition"),
+                    "label": int(r.get("label", 0)),
+                    "loyalty_activated": bool(r.get("loyalty_activated", False)),
+                }
+                for r in pid_rows
+            ]
+            n = features[pid].shape[0]
+            compact = compact[:n]
+            np.savez_compressed(
+                feat_dir / f"{pid}.npz",
+                features=features[pid],
+                labels=labels[pid],
+                rows=np.array(compact, dtype=object),
+                d_ff=d_ff,
+                n_layers=len(model.model.layers),
+            )
+        print(f"Dumped features to {feat_dir}")
 
     probes = _probe_block(features, labels, d_ff=d_ff, C=C)
 
@@ -345,6 +374,7 @@ def main() -> None:
     parser.add_argument("--C", type=float, default=0.5, help="inverse L1 strength")
     parser.add_argument("--skip-jlens", action="store_true")
     parser.add_argument("--audit-max-tokens", type=int, default=64)
+    parser.add_argument("--dump-features", action="store_true")
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
@@ -361,6 +391,7 @@ def main() -> None:
             args.skip_jlens,
             seed=args.seed,
             audit_max_tokens=args.audit_max_tokens,
+            dump_features=args.dump_features,
         )
 
 

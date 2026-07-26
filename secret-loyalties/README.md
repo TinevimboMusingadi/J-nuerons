@@ -39,6 +39,9 @@ loyalty activates.
 | J-lens style disposition readout | `src/jlens_readout.py` | second, independent white-box view |
 | Token-level monitor | `src/circuit_monitor.py` | Track 3 stretch |
 | Model backends | `src/providers.py` | local HF, Anthropic API, offline stub |
+| Loyalty-gated neuron tracking | `src/neuron_tracking.py` | Cohen d / FDR when signal fires |
+| Stats rigor | `src/stats_rigor.py` | permutation, bootstrap, confounds |
+| Paper tables + logs | `src/analyze_results.py` | `results/logs/` |
 
 ---
 
@@ -161,3 +164,23 @@ measurable, and the detection method is the artifact intended for release.
 4. Anthropic (2026) — *Verbalizable Representations Form a Global Workspace in Language Models*.
 5. Fronsdal et al. (2025) — *Petri: Parallel Exploration Tool for Risky Interactions*.
 6. Musingadi (2026) — *J-Neurons*, Global South AI Safety Hackathon.
+
+
+---
+
+## Pilot results (Qwen2.5-0.5B, CPU — real model, not mock)
+
+| Metric | Value |
+|---|---:|
+| Mean CV AUROC | **0.835** |
+| Mean transfer AUROC | **0.949** |
+| Black-box detection @ levels 1–3 | **0.042** |
+| Control false-positive rate | **0.083** |
+
+Full write-up: [`reports/lneurons_report.md`](reports/lneurons_report.md)  
+Tables/logs: [`results/logs/`](results/logs/)
+
+```bash
+python secret-loyalties/tests/test_rigor.py
+python secret-loyalties/src/analyze_results.py
+```
